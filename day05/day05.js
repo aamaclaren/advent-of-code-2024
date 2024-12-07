@@ -44,7 +44,7 @@ const correctlyOrderedUpdatesValue = updates.reduce((sum, update) => {
 
             //check if b rules violate the orientation - this is the inverse check of the a b orientation above
             if(orderingRules[b][orientation].includes(a)){
-                //rule violeted - return
+                //rule violated - return
                 return sum;
             }
         }

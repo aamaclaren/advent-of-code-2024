@@ -104,7 +104,9 @@ const isPositionBlocked = (map, position) => map[position.y][position.x] === '#'
 
 const isOutOfBounds = (map, position) => position.y < 0 || position.y >= map.length || position.x < 0 || position.x >= map[position.y].length;
 
-const getPositionKey = (guardState) => `${guardState.position.y}:${guardState.position.x}::${guardState.velocity.y}:${guardState.velocity.x}`;
+const getPositionKey = (position) => `${position.y}:${position.x}`;
+
+const getGuardStateKey = (guardState) => `${guardState.position.y}:${guardState.position.x}::${guardState.velocity.y}:${guardState.velocity.x}`;
 
 const getNextGuardState = (map, {position, velocity}) => {
     const nextPosition = {
@@ -143,18 +145,16 @@ const getNextGuardState = (map, {position, velocity}) => {
 }
 
 const isGuardInLoop = (map, guardState) => {
-    const initialPositionKey = getPositionKey(guardState);
     const visitedPath = {};
 
     while(guardState.status !== STATUSES.COMPLETE){
-        const positionKey = getPositionKey(guardState);
+        const guardStateKey = getGuardStateKey(guardState);
         
-        if(visitedPath[positionKey]){
-            //fs.writeFileSync(`data/${initialPositionKey}.json`, JSON.stringify(visitedPath));
+        if(visitedPath[guardStateKey]){
             return true;
         }
 
-        visitedPath[positionKey] = true;
+        visitedPath[guardStateKey] = true;
 
         const nextGuardState = getNextGuardState(map, guardState);
 
@@ -168,11 +168,10 @@ const isGuardInLoop = (map, guardState) => {
 }
 
 //part 1
-const getGuardPathCount = () => {
+const execute = () => {
     const { position: startingPosition, velocity: startingVelocity } = getGuardState(map);
-    const guardPath = {
-        [`${startingPosition.y}:${startingPosition.x}`]: true
-    };
+    const guardPath = {};
+    const loopPositions = {};
     
     const guardState = {
         status: STATUSES.PATROLLING,
@@ -182,19 +181,58 @@ const getGuardPathCount = () => {
     
     while(guardState.status !== STATUSES.COMPLETE){
         const nextGuardState = getNextGuardState(map, guardState);
-    
+        
+        const currentPositionKey = getPositionKey(guardState.position);
+        const nextPositionKey = getPositionKey(nextGuardState.position);
+        
+        const isKnownLoopPosition = loopPositions[nextPositionKey] === true;
+        const isStartingPosition = nextGuardState.position.x === startingPosition.x && nextGuardState.position.y === startingPosition.y;
+        const isObstacle = map[nextGuardState.position.y][nextGuardState.position.x] === '#';
+        const willMoveForward = guardState.position.x !== nextGuardState.position.x || guardState.position.y !== nextGuardState.position.y;
+        const canPlaceObstacle = isStartingPosition === false && isObstacle === false && willMoveForward === true;
+
+        if(!isKnownLoopPosition && canPlaceObstacle){
+            //copy map to edit and add an obstacle
+            const testMap = map.map(row => [...row]);
+            testMap[nextGuardState.position.y][nextGuardState.position.x] = '#';
+
+            //copy current guardState
+            const testGuardState = {
+                status: guardState.status,
+                position: {
+                    x: guardState.position.x,
+                    y: guardState.position.y
+                },
+                velocity: {
+                    x: guardState.velocity.x,
+                    y: guardState.velocity.y
+                }
+            };
+            
+            if(isGuardInLoop(testMap, testGuardState)){
+                loopPositions[nextPositionKey] = true;
+            }
+        }
+        
         //mark the position in the guards path
-        guardPath[`${nextGuardState.position.y}:${nextGuardState.position.x}`] = true;
-    
+        guardPath[currentPositionKey] = true;
+
         guardState.status = nextGuardState.status;
         guardState.position = nextGuardState.position;
         guardState.velocity = nextGuardState.velocity;
     }
 
-    return Object.keys(guardPath).length;
+    return {
+        part1: Object.keys(guardPath).length,
+        part2: Object.keys(loopPositions).length
+    };
 }
 
-console.log(`Part 1: ${getGuardPathCount()}`);
+console.time('timer');
+const { part1, part2 } = execute();
+console.log(`Part 1: ${part1}`);
+console.log(`Part 2: ${part2}`);
+console.timeEnd('timer');
 
 //part 2
 const getLoopCount = () => {
@@ -248,6 +286,6 @@ const getLoopCount = () => {
     return Object.keys(loopPositions).length
 }
 
-console.time('part2');
-console.log(`Part 2: ${getLoopCount()}`);
-console.timeEnd('part2');
+// console.time('part2');
+// console.log(`Part 2: ${getLoopCount()}`);
+// console.timeEnd('part2');
