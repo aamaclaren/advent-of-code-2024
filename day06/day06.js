@@ -150,6 +150,7 @@ const isGuardInLoop = (map, guardState) => {
     while(guardState.status !== STATUSES.COMPLETE){
         const guardStateKey = getGuardStateKey(guardState);
         
+        //if guard has visited this position with the same velocity, it's a loop
         if(visitedPath[guardStateKey]){
             return true;
         }
