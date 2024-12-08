@@ -20,7 +20,8 @@ const getPositionDistance = (posA, posB) => ({
     x: posB.x - posA.x
 });
 
-const getAntinodePositions = (map, posA, posB) => {
+const getAntinodePositions_pt1 = (map, posA, posB) => {
+    const antinodePositions = [];
     const distance = getPositionDistance(posA, posB);
 
     const antinodeA = {
@@ -33,15 +34,39 @@ const getAntinodePositions = (map, posA, posB) => {
         x: posB.x + distance.x,
     }
 
-    return [
-        antinodeA,
-        antinodeB
-    ].filter((position) => isPositionInBounds(map, position));
+    if(isPositionInBounds(map, antinodeA)){
+        antinodePositions.push(antinodeA)
+    }
+    
+    if(isPositionInBounds(map, antinodeB)){
+        antinodePositions.push(antinodeB)
+    }
+
+    return antinodePositions;
 }
 
-//part 1
+const getAntinodePositions_pt2 = (map, posA, posB) => {
+    const antinodePositions = [];
+    const distance = getPositionDistance(posA, posB);
+
+    const nextPosA = { ...posA };
+    while(isPositionInBounds(map, nextPosA)){
+        antinodePositions.push({...nextPosA});
+        nextPosA.y -= distance.y;
+        nextPosA.x -= distance.x;
+    }
+
+    const nextPosB = { ...posB };
+    while(isPositionInBounds(map, nextPosB)){
+        antinodePositions.push({...nextPosB});
+        nextPosB.y += distance.y;
+        nextPosB.x += distance.x;
+    }
+
+    return antinodePositions;
+}
+
 const antennaPositions = {};
-const antinodePositions = {};
 
 //find all antenna positions and group them by frequency
 for(let y = 0; y < map.length; y++){
@@ -58,25 +83,54 @@ for(let y = 0; y < map.length; y++){
     }
 }
 
-//run through all antenna positions in each frequency to find any antinode positions
-Object.values(antennaPositions).forEach((positions) => {
-    for(let i = 0; i < positions.length - 1; i++){
-        const a = getPositionValue(positions[i]);
-        for(let j = i + 1; j < positions.length; j++){
-            const b = getPositionValue(positions[j]);
 
-            const abAntinodePositions = getAntinodePositions(map, a, b);
+//part 1
+const getPart1Antinodes = () => {
+    const antinodePositions = {};
 
-            abAntinodePositions.forEach((antinodePosition) => {
-                antinodePositions[getPositionKey(antinodePosition)] = true;
-            });
+    //run through all antenna positions in each frequency to find any antinode positions
+    Object.values(antennaPositions).forEach((positions) => {
+        for(let i = 0; i < positions.length - 1; i++){
+            const a = getPositionValue(positions[i]);
+            for(let j = i + 1; j < positions.length; j++){
+                const b = getPositionValue(positions[j]);
+
+                const abAntinodePositions = getAntinodePositions_pt1(map, a, b);
+
+                abAntinodePositions.forEach((antinodePosition) => {
+                    const antinodePositionKey = getPositionKey(antinodePosition);
+                    antinodePositions[`${antinodePositionKey}`] = true;
+                });
+            }
         }
-    }
-});
+    });
 
-// console.log(antinodePositions);
-console.log(`Part 1: ${Object.keys(antinodePositions).length}`);
+    return antinodePositions;
+}
 
 //part 2
+const getPart2Antinodes = () => {
+    const antinodePositions = {};
 
-console.log(`Part 2:`);
+    //run through all antenna positions in each frequency to find any antinode positions
+    Object.values(antennaPositions).forEach((positions) => {
+        for(let i = 0; i < positions.length - 1; i++){
+            const a = getPositionValue(positions[i]);
+            for(let j = i + 1; j < positions.length; j++){
+                const b = getPositionValue(positions[j]);
+
+                const abAntinodePositions = getAntinodePositions_pt2(map, a, b);
+
+                abAntinodePositions.forEach((antinodePosition) => {
+                    const antinodePositionKey = getPositionKey(antinodePosition);
+                    antinodePositions[`${antinodePositionKey}`] = true;
+                });
+            }
+        }
+    });
+
+    return antinodePositions;
+}
+
+console.log(`Part 1: ${Object.keys(getPart1Antinodes()).length}`);
+console.log(`Part 2: ${Object.keys(getPart2Antinodes()).length}`);
