@@ -109,12 +109,11 @@ const getPositionKey = (position) => `${position.y}:${position.x}`;
 const getGuardStateKey = (guardState) => `${guardState.position.y}:${guardState.position.x}::${guardState.velocity.y}:${guardState.velocity.x}`;
 
 const getNextGuardState = (map, {position, velocity}) => {
-    const nextPosition = {
+    let nextPosition = { 
         x: position.x + velocity.x,
         y: position.y + velocity.y
     };
 
-    //did guard leave the map? If so, return complete
     if(isOutOfBounds(map, nextPosition)){
         return {
             status: STATUSES.COMPLETE,
@@ -123,24 +122,19 @@ const getNextGuardState = (map, {position, velocity}) => {
         }
     }
 
-    //is next position blocked? If so, rotate
-    if(isPositionBlocked(map, nextPosition)){
-        const rotatedVelocity = getRotatedVelocity(velocity);
-        return {
-            status: STATUSES.PATROLLING,
-            position,
-            velocity: rotatedVelocity
-        }
+    let nextVelocity = { ...velocity };
+    while(isPositionBlocked(map, nextPosition)){
+        nextVelocity = getRotatedVelocity(nextVelocity);
+        nextPosition = {
+            x: position.x + nextVelocity.x,
+            y: position.y + nextVelocity.y
+        };
     }
 
-    //move forward otherwise
     return {
         status: STATUSES.PATROLLING,
-        position: {
-            x: position.x + velocity.x,
-            y: position.y + velocity.y
-        },
-        velocity
+        position: nextPosition,
+        velocity: nextVelocity
     };
 }
 
@@ -168,16 +162,43 @@ const isGuardInLoop = (map, guardState) => {
     return false;
 }
 
+const testLoop = (map, guardState) => {
+    const nextGuardState = getNextGuardState(map, guardState);
+
+    //copy map to edit and add an obstacle
+    const testMap = map.map(row => [...row]);
+    testMap[nextGuardState.position.y][nextGuardState.position.x] = '#';
+
+    //copy current guardState
+    const testGuardState = {
+        status: guardState.status,
+        position: {
+            x: guardState.position.x,
+            y: guardState.position.y
+        },
+        velocity: {
+            x: guardState.velocity.x,
+            y: guardState.velocity.y
+        }
+    };
+    
+    if(isGuardInLoop(testMap, testGuardState)){
+        return true;
+    }
+
+    return false;
+}
+
 //part 1
 const execute = () => {
-    const { position: startingPosition, velocity: startingVelocity } = getGuardState(map);
+    const { position, velocity } = getGuardState(map);
     const guardPath = {};
     const loopPositions = {};
     
-    const guardState = {
+    let guardState = {
         status: STATUSES.PATROLLING,
-        position: startingPosition,
-        velocity: startingVelocity
+        position,
+        velocity
     };
     
     while(guardState.status !== STATUSES.COMPLETE){
@@ -185,42 +206,15 @@ const execute = () => {
         
         const currentPositionKey = getPositionKey(guardState.position);
         const nextPositionKey = getPositionKey(nextGuardState.position);
-        
-        const isKnownLoopPosition = loopPositions[nextPositionKey] === true;
-        const isStartingPosition = nextGuardState.position.x === startingPosition.x && nextGuardState.position.y === startingPosition.y;
-        const isObstacle = map[nextGuardState.position.y][nextGuardState.position.x] === '#';
-        const willMoveForward = guardState.position.x !== nextGuardState.position.x || guardState.position.y !== nextGuardState.position.y;
-        const canPlaceObstacle = isStartingPosition === false && isObstacle === false && willMoveForward === true;
 
-        if(!isKnownLoopPosition && canPlaceObstacle){
-            //copy map to edit and add an obstacle
-            const testMap = map.map(row => [...row]);
-            testMap[nextGuardState.position.y][nextGuardState.position.x] = '#';
-
-            //copy current guardState
-            const testGuardState = {
-                status: guardState.status,
-                position: {
-                    x: guardState.position.x,
-                    y: guardState.position.y
-                },
-                velocity: {
-                    x: guardState.velocity.x,
-                    y: guardState.velocity.y
-                }
-            };
-            
-            if(isGuardInLoop(testMap, testGuardState)){
-                loopPositions[nextPositionKey] = true;
-            }
+        if(testLoop(map, guardState)){
+            loopPositions[nextPositionKey] = true;
         }
         
         //mark the position in the guards path
         guardPath[currentPositionKey] = true;
-
-        guardState.status = nextGuardState.status;
-        guardState.position = nextGuardState.position;
-        guardState.velocity = nextGuardState.velocity;
+        
+        guardState = nextGuardState;
     }
 
     return {
