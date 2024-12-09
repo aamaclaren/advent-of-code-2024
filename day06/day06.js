@@ -213,7 +213,6 @@ const execute = () => {
         
         //mark the position in the guards path
         guardPath[currentPositionKey] = true;
-        
         guardState = nextGuardState;
     }
 
