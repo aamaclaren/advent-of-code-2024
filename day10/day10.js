@@ -17,10 +17,7 @@ const getPositionFromKey = (key) => {
 
 const isTrailHead = (map, position ) => getPositionValue(map, position) === 0;
 
-const isTrailEnd = (map, position ) => {
-    console.log(position);
-    return getPositionValue(map, position) === 9
-};
+const isTrailEnd = (map, position ) => getPositionValue(map, position) === 9;
 
 const isInBounds = (map, position) => position.y >= 0 && position.y < map.length && position.x >= 0 && position.x < map[position.y].length;
 
@@ -53,50 +50,62 @@ const getNavigablePositions = (map, position) => {
     return navigablePositions;
 }
 
-const findPathToTrailEnd = (map, position) => {
-    const positionKey = getPositionKey(position);
-    if(isTrailEnd(map, position)){
-        return positionKey;
+const findPathsToTrailEnd = (map, position) => {
+    const pathsToTrailEnd = [];
+
+    const traversePath = (map, currentPath) => {
+        const position = currentPath.at(-1);
+
+        if(isTrailEnd(map, position)){
+            pathsToTrailEnd.push(currentPath);
+            return;
+        }
+    
+        const navigablePositions = getNavigablePositions(map, position);
+    
+        navigablePositions.forEach((navigablePosition) => {
+            traversePath(map, [...currentPath, navigablePosition]);
+        });
     }
 
-    const navigablePositions = getNavigablePositions(map, position);
-    if(navigablePositions.length === 0){
-        return;
-    }
+    traversePath(map, [ position ]);
 
-    return navigablePositions
-        .flatMap((navigablePosition) => `${positionKey}::${findPathToTrailEnd(map, navigablePosition)}` ) 
+    return pathsToTrailEnd;
+}
+
+const trailHeads = {};
+
+//search for all trail heads - for each trail head, map the paths to all trail ends
+for(let y = 0; y < map.length; y++){
+    for(let x = 0; x < map[y].length; x++){
+        const position = { y, x };
+        if(isTrailHead(map, position)){
+            const trailHeadPositionKey = getPositionKey(position);
+            trailHeads[trailHeadPositionKey] = findPathsToTrailEnd(map, position);
+        }
+    }
 }
 
 //part 1
-const trailHeads = {};
+console.time('Part 1');
+const trailScoreList = Object.values(trailHeads).reduce((scoreList, trailPaths) => {
+    trailPaths.forEach((trailPath) => {
+        const startPositionKey = getPositionKey(trailPath.at(0));
+        const endPositionKey = getPositionKey(trailPath.at(-1));
+        
+        scoreList[`${startPositionKey}:${endPositionKey}`] = true;
+    });
 
-console.log(findPathToTrailEnd(map, {y: 0, x: 2}));
+    return scoreList;
+}, {});
 
-// //search for trail heads and initialize map
-// for(let y = 0; y < map.length; y++){
-//     for(let x = 0; x < map[y].length; x++){
-//         if(isTrailHead(map, { y, x })){
-//             const trailHeadPositionKey = getPositionKey( { y, x });
-//             trailHeads[trailHeadPositionKey] = {};
-//         }
-//     }
-// }
+const sumTrailScore = Object.keys(trailScoreList).length;
+console.log(`Part 1: ${sumTrailScore}`);
+console.timeEnd('Part 1');
 
-// //find all trail ends for each trail head
-// const sumScores = Object.keys(trailHeads).reduce((sum, trailHeadKey) => {
-//     const trailHeadPosition = getPositionFromKey(trailHeadKey);
-
-//     findPathToTrailEnd(map, trailHeadPosition).forEach((trailEndPosition) => {
-//         const trailEndKey = getPositionKey(trailEndPosition);
-//         trailHeads[trailHeadKey][trailEndKey] = true;
-//     });
-
-//     return sum + Object.keys(trailHeads[trailHeadKey]).length;
-// }, 0);
-
-// console.log(`Part 1: ${sumScores}`);
 
 //part 2
-
-console.log(`Part 2:`);
+console.time('Part 2');
+const sumTrailRating = Object.values(trailHeads).reduce((sum, trailPaths) => sum + trailPaths.length, 0)
+console.log(`Part 2: ${sumTrailRating}`);
+console.timeEnd('Part 2');
