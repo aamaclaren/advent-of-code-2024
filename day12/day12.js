@@ -7,14 +7,111 @@ const getPlantType = (map, { y, x }) => map[y][x];
 
 const isInBounds = (map, { y, x }) => y >= 0 && y < map.length && x >= 0 && x < map[y].length;
 
+const isPlantType = (map, position, expectedPlantType) => isInBounds(map, position) && getPlantType(map, position) === expectedPlantType;
+
+const getCornerCount = (map, position) => {
+    const plotPlantType = getPlantType(map, position);
+    let count = 0;
+
+    //INSIDE CORNERS
+
+    //top left corner
+    if(
+        isPlantType(map, getTopPosition(position), plotPlantType) && 
+        isPlantType(map, getLeftPosition(position), plotPlantType) &&
+        !isPlantType(map, getTopLeftPosition(position), plotPlantType)
+    ){
+        count++;
+    }
+
+    //top right corner
+    if(
+        isPlantType(map, getTopPosition(position), plotPlantType) && 
+        isPlantType(map, getRightPosition(position), plotPlantType) &&
+        !isPlantType(map, getTopRightPosition(position), plotPlantType)
+    ){
+        count++;
+    }
+
+    //bottom left corner
+    if(
+        isPlantType(map, getBottomPosition(position), plotPlantType) && 
+        isPlantType(map, getLeftPosition(position), plotPlantType) &&
+        !isPlantType(map, getBottomLeftPosition(position), plotPlantType)
+    ){
+        count++;
+    }
+
+    //bottom right corner
+    if(
+        isPlantType(map, getBottomPosition(position), plotPlantType) && 
+        isPlantType(map, getRightPosition(position), plotPlantType) &&
+        !isPlantType(map, getBottomRightPosition(position), plotPlantType)
+    ){
+        count++;
+    }
+
+    //OUTSIDE CORNERS
+
+    //top left
+    if(
+        !isPlantType(map, getTopPosition(position), plotPlantType) && 
+        !isPlantType(map, getLeftPosition(position), plotPlantType)
+    ){
+        count++;
+    }
+
+    //top right
+    if(
+        !isPlantType(map, getTopPosition(position), plotPlantType) && 
+        !isPlantType(map, getRightPosition(position), plotPlantType)
+    ){
+        count++;
+    }
+
+    //bottom left
+    if(
+        !isPlantType(map, getBottomPosition(position), plotPlantType) && 
+        !isPlantType(map, getLeftPosition(position), plotPlantType)
+    ){
+        count++;
+    }
+
+    //bottom right
+    if(
+        !isPlantType(map, getBottomPosition(position), plotPlantType) && 
+        !isPlantType(map, getRightPosition(position), plotPlantType)
+    ){
+        count++;
+    }
+
+    return count;
+}
+
 const getPositionKey = ({ y, x }) => `${y}:${x}`;
 
-const getAdjacentPositions = (map, { y, x }) => ([
-    { y: y + 1, x },
-    { y: y - 1, x },
-    { y, x: x + 1 },
-    { y, x: x - 1 },
-].filter((position) => isInBounds(map, position)));
+const getTopLeftPosition = ({ y, x }) => ({ y: y - 1, x: x - 1});
+
+const getTopRightPosition = ({ y, x }) => ({ y: y - 1, x: x + 1});
+
+const getBottomLeftPosition = ({ y, x }) => ({ y: y + 1, x: x - 1});
+
+const getBottomRightPosition = ({ y, x }) => ({ y: y + 1, x: x + 1});
+
+const getTopPosition = ({ y, x }) => ({ y: y - 1, x});
+
+const getBottomPosition = ({ y, x }) => ({ y: y + 1, x});
+
+const getLeftPosition = ({ y, x }) => ({ y, x: x - 1});
+
+const getRightPosition = ({ y, x }) => ({ y, x: x + 1});
+
+const getAdjacentPositions = (map, position) => ([
+    getTopPosition(position),
+    getBottomPosition(position),
+    getLeftPosition(position),
+    getRightPosition(position),
+].filter((adjacentPosition) => isInBounds(map, adjacentPosition)));
 
 const getPlotPositions = (map, startingPosition) => {
     const plotPlantType = getPlantType(map, startingPosition);
@@ -64,7 +161,8 @@ const getPlotPositionWallCount = (map, position) => {
     return exteriorWallCount + interiorWallCount;
 }
 
-//part 1
+//Find the plots
+console.time('Find Plots');
 const visited = {};
 const plots = []
 gardenMap.forEach((row, y) => {
@@ -85,7 +183,10 @@ gardenMap.forEach((row, y) => {
         });
     });
 });
+console.timeEnd('Find Plots');
 
+//part 1
+console.time('Part 1');
 const plotRatingData = plots.map((plot) => ({
     area: plot.length,
     fencePieces: plot.reduce((sum, position) => sum + getPlotPositionWallCount(gardenMap, position), 0)
@@ -94,7 +195,17 @@ const plotRatingData = plots.map((plot) => ({
 const totalPrice = plotRatingData.reduce((sum, plotRatingDatum) => sum + (plotRatingDatum.area * plotRatingDatum.fencePieces), 0);
 
 console.log(`Part 1: ${totalPrice}`);
+console.timeEnd('Part 1');
 
 //part 2
+console.time('Part 2');
+const plotBulkRatingData = plots.map((plot) => ({
+    plantType: getPlantType(gardenMap, plot[0]),
+    area: plot.length,
+    fenceEdges: plot.reduce((sum, position) => sum + getCornerCount(gardenMap, position), 0)
+}));
 
-console.log(`Part 2:`);
+const totalBulkPrice = plotBulkRatingData.reduce((sum, plotRatingDatum) => sum + (plotRatingDatum.area * plotRatingDatum.fenceEdges), 0);
+
+console.log(`Part 2: ${totalBulkPrice}`);
+console.timeEnd('Part 2');
